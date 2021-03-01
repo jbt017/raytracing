@@ -101,8 +101,8 @@ class sphere:
         self.radius = radius
         self.color = color
         self.center = center
-        self.localweight = 20
-        self.reflectweight = 80
+        self.localweight = 0.20
+        self.reflectweight = 0.80
         self.N = []
 
     def getcolor(self, X, Z):
@@ -119,8 +119,8 @@ class checkerboard:
         self.y = -200
         self.color = ""
         self.point = [0, -200, 0]
-        self.localweight = 80
-        self.reflectweight = 20
+        self.localweight = 0.80
+        self.reflectweight = 0.20
         P = vectorsub([100, -200, 100], self.point)
         Q = vectorsub([-100, -200, 100], self.point)
         self.N = normalvector(crossproduct(P,Q))
@@ -227,7 +227,7 @@ def colorHexCode(intensity):
 def computeLocalColor(object, startPoint):
 
     # calculate red
-    L = normalvector(vectorsub(lightsource, startPoint))
+    L = normalvector(lightsource)
     V = normalvector([0,0,-1])
     N = object.getsurfNorm(startPoint)
     ambient = object.getcolor(startPoint[0], startPoint[2])[0] * Kd
@@ -244,6 +244,7 @@ def computeLocalColor(object, startPoint):
     specular = Ipl[0] * Ks * RdotV**specIndex
 
     redcolor = triColorHexCode(ambient, diffuse, specular, object.getcolor(startPoint[0], startPoint[1]))
+    # print(f"Red color = {redcolor}")
 
 
     # calculate green
@@ -266,9 +267,11 @@ def computeLocalColor(object, startPoint):
 
     greencolor = triColorHexCode(ambient, diffuse, specular, object.getcolor(startPoint[0], startPoint[1]))
 
+    # print(f"Green color = {greencolor}")
+
     # calculate blue
 
-    L = normalvector(vectorsub(lightsource, startPoint))
+    L = normalvector(lightsource)
     V = normalvector([0,0,-1])
     N = object.getsurfNorm(startPoint)
     ambient = object.getcolor(startPoint[0], startPoint[2])[2] * Kd
@@ -288,15 +291,51 @@ def computeLocalColor(object, startPoint):
 
     # print(f"bluecolor is {bluecolor}") 
 
-    color = redcolor[0:3] + greencolor[3:5] + bluecolor[5:7]
+    color = redcolor[3:5] + greencolor[3:5] + bluecolor[3:5]
     # print(f"combined color code is {color}")
+
+    # print(f"Blue color = {bluecolor}")
 
 
     return color
 
 # combine color sources to output pixel color
 def combineColors(localColor, localWeight, reflectedColor, reflectedWeight):
-    color = localColor
+
+    localred = round(int(localColor[1:3], 16) * localWeight)
+    localblue = round(int(localColor[3:5], 16) * localWeight)
+    localgreen = round(int(localColor[5:7], 16) * localWeight)
+
+    refred = round(int(reflectedColor[1:3], 16) * reflectedWeight)
+    refblue = round(int(reflectedColor[3:5], 16) * reflectedWeight)
+    refgreen = round(int(reflectedColor[5:7], 16) * reflectedWeight)
+
+    newred = localred + refred
+    newblue = localblue + refblue
+    newgreen = localgreen + refgreen
+
+    redhexstring = str(hex(newred))
+    greenhexstring = str(hex(newgreen))
+    bluehexstring = str(hex(newblue))
+
+    trimmedred = redhexstring[2:]
+    trimmedgreen = greenhexstring[2:]
+    trimmedblue = bluehexstring[2:]
+
+    if len(trimmedred) == 1:
+        trimmedred = "0" + trimmedred
+
+    if len(trimmedgreen) == 1:
+        trimmedgreen = "0" + trimmedgreen
+
+    if len(trimmedblue) == 1:
+        trimmedblue = "0" + trimmedblue
+
+    color = "#" + trimmedred + trimmedgreen + trimmedblue
+
+
+
+
     return color
 
 
@@ -308,16 +347,15 @@ def traceray(startPoint, ray, depth):
     # return black if you reach the bottom of the recursive call
     if depth == 0:
         return blackbackground
+        # print("max depth")
 
     # interset ray with all objects and find intersection point
     # (if any) that is closest to startPoint of ray
-    if depth == 4:
-        ray = vectorsub(startPoint, ray)
     intersection = findClosestIntersect(startPoint, ray)
 
     # if no intersection return skyboxcolor
 
-    if intersection[0] == []:
+    if intersection == []:
         return skyboxcolor
 
     # Compute local color
@@ -335,8 +373,9 @@ def traceray(startPoint, ray, depth):
 
     # Combine local and reflected colors
     color = combineColors(localColor, intersection[1].localweight, reflectedColor, intersection[1].reflectweight)
+    # print(f"This is a combined output color {color}")
 
-    return localColor
+    return color
 
 
 # find possible intersects (if any) and return the closest, return false if no intersect
@@ -361,6 +400,7 @@ def findClosestIntersect(startPoint, ray):
 
             intersect.append(vectoradd(startPoint, scalarMult(ray, t)))
             intersect.append(i)
+            # print("intersects the sphere")
             
             return intersect
         elif discriminant > 0:
@@ -373,6 +413,7 @@ def findClosestIntersect(startPoint, ray):
 
             intersect.append(vectoradd(startPoint, scalarMult(ray, t)))
             intersect.append(i)
+            # print("intersects the sphere")
             return intersect
 
     # check checker plane for possible intersections
@@ -399,6 +440,7 @@ def findClosestIntersect(startPoint, ray):
 
             intersect.append(vectoradd(startPoint, scalarMult(ray, t)))
             intersect.append(board)
+            # print("intersects the plane")
 
 
     return intersect
@@ -419,19 +461,26 @@ w.pack()
 # Setup Objects
 
 # instance green, red, and blue spheres
-spherelist.append(sphere(50, [250, 200, 50], normalvector([255, 0, 0])))
-spherelist.append(sphere(50, [500, 200, -50], normalvector([0, 0, 255])))
-spherelist.append(sphere(50, [700, 200, -0], normalvector([0, 255, 0])))
+spherelist.append(sphere(50, [250, 100, -100], normalvector([255, 0, 0])))
+spherelist.append(sphere(50, [500, 100, -50], normalvector([0, 0, 255])))
+spherelist.append(sphere(50, [700, 100, -20], normalvector([0, 255, 0])))
+spherelist = []
 
 board = checkerboard()
 
 # start the draw
-for y in range(CanvasHeight):
-        for x in range(CanvasWidth):
-            ijk = vectorsub([x, y, 0], viewpoint)
-            color = traceray(viewpoint, ijk, depth)
-            # print(f"printing color {color} at {x} and {y}")
-            w.create_line(x, y, x+1, y, fill=color)
+top = round(CanvasHeight/2)
+bottom = round(-CanvasHeight/2)
+left = round(-CanvasWidth/2)
+right = round(CanvasWidth/2)
+for y in range(top, bottom, -1):
+    for x in range(left, right):
+        ijk = normalvector(vectorsub([x, y, 0], viewpoint))
+        color = traceray(viewpoint, ijk, depth)
+        # print(f"printing color {color} at {x} and {y}")
+        w.create_line(right+x, top-y, right+x+1, top-y, fill=color)
+
+print("Finished with the drawing")
 
 
 root.mainloop()
