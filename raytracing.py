@@ -30,6 +30,14 @@ Ks = 0.5
 specIndex = 1
 
 # ************************************************************************************
+# object defitions
+
+class sphere:
+    def __init__(self, radius, color):
+        self.radius = radius
+        self.color = color
+
+# ************************************************************************************
 # function definitions
 
 # vector addition
@@ -148,3 +156,4 @@ outerframe.pack()
 
 w = Canvas(outerframe, width=CanvasWidth, height=CanvasHeight)
 w.pack()
+root.mainloop()
