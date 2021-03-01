@@ -432,8 +432,8 @@ def findClosestIntersect(startPoint, ray):
         denominator = A * ray[0] + B * ray[1] + C * ray[2]
         
         # check to see if intercept exists
-        if denominator == 0:
-            return intersect
+        if denominator < 0.001:
+            return []
         else:
             numerator = -((A * startPoint[0] + B * startPoint[1] + C * startPoint[2]) - D)
             t = numerator / denominator
@@ -461,10 +461,9 @@ w.pack()
 # Setup Objects
 
 # instance green, red, and blue spheres
-spherelist.append(sphere(50, [250, 100, -100], normalvector([255, 0, 0])))
-spherelist.append(sphere(50, [500, 100, -50], normalvector([0, 0, 255])))
-spherelist.append(sphere(50, [700, 100, -20], normalvector([0, 255, 0])))
-spherelist = []
+spherelist.append(sphere(50, [250, 100, -500], normalvector([255, 0, 0])))
+spherelist.append(sphere(50, [500, 100, -450], normalvector([0, 0, 255])))
+spherelist.append(sphere(50, [700, 100, -400], normalvector([0, 255, 0])))
 
 board = checkerboard()
 
