@@ -250,6 +250,31 @@ def findClosestIntersect(startPoint, ray):
 
             intersect = vectoradd(startPoint, scalarMult(ray, t))
 
+    # check checker plane for possible intersections
+    if intersect == []:
+        # calculate pieces of t formula
+        A = "X component of point on plane surface norm"
+        B = "Y componenet of point on plane surface norm"
+        C = "Z component of point on plane surface norm"
+
+        a = "X component of point on plan"
+        b = "Y componenet of point on plane"
+        c = "Z component of point on plane" 
+
+        D = A * a + B * b + C * c
+
+        denominator = A * ray[0] + B * ray[1] + C * ray[2]
+        
+        # check to see if intercept exists
+        if denominator == 0:
+            return intersect
+        else:
+            numerator = -((A * startPoint[0] + B * startPoint[1] + C * startPoint[2]) - D)
+            t = numerator / denominator
+
+            intersect = vectoradd(startPoint, scalarMult(ray, t))
+
+
     return intersect
 
 # draw methods
