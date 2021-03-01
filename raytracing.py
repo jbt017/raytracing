@@ -131,13 +131,17 @@ class checkerboard:
         else:
             ColorFlag = 0
 
-        if abs(X) % 200 > 100:
+        if abs(X) % 400 > 200:
             if ColorFlag == 0:
                 ColorFlag = 1
+            else:
+                ColorFlag = 0
 
-        if abs(Z) % 200 > 100:
+        if abs(Z) % 400 > 200:
             if ColorFlag == 0:
                 ColorFlag = 1
+            else:
+                ColorFlag = 0
 
         if ColorFlag == 1:
             self.color = normalvector([255, 0, 0])
@@ -197,7 +201,11 @@ def reflect(N, L):
 
     if twoCosPhi > 0:
         for i in range(3):
-            R.append( - L[i])
+            R.append(N[i] - (L[i] / twoCosPhi))
+
+    elif twoCosPhi == 0:
+        for i in range(3):
+            R.append( - L[i]) 
     else:
         for i in range(3):
             R.append( -N[i] + (L[i] / twoCosPhi))
@@ -212,6 +220,10 @@ def triColorHexCode(ambient, diffuse, specular, color):
     return colorString
 
 def colorHexCode(intensity):
+    if intensity > 1:
+        intensity = 1
+    if intensity < 0:
+        intensity = 0
     hexString = str(hex(round(255 * intensity)))
     if hexString[0] == "-":
         print("negative intensity error")
@@ -291,7 +303,7 @@ def computeLocalColor(object, startPoint):
 
     # print(f"bluecolor is {bluecolor}") 
 
-    color = redcolor[3:5] + greencolor[3:5] + bluecolor[3:5]
+    color = "#" + redcolor[3:5] + greencolor[3:5] + bluecolor[3:5]
     # print(f"combined color code is {color}")
 
     # print(f"Blue color = {bluecolor}")
@@ -359,7 +371,7 @@ def traceray(startPoint, ray, depth):
         return skyboxcolor
 
     # Compute local color
-    localColor = computeLocalColor(intersection[1], startPoint)
+    localColor = computeLocalColor(intersection[1], intersection[0])
 
     # Compute reflected direction
     N = intersection[1].getsurfNorm(startPoint)
@@ -388,15 +400,15 @@ def findClosestIntersect(startPoint, ray):
         # calculate pieces of your quadratic
         a = ray[0]**2 + ray[1]**2 + ray[2]**2
         b = 2 * ray[0] * (startPoint[0] - i.center[0]) + 2 * ray[1] * (startPoint[1] - i.center[1]) + 2 * ray[2] * (startPoint[2] - i.center[2])
-        c = i.center[0]**2 + i.center[1]**2 + i.center[2]**2 + startPoint[0] + startPoint[1] + startPoint[2] + 2 * (-i.center[0] + startPoint[0] - i.center[1] + startPoint[1] - i.center[2] + startPoint[2]) - i.radius**2
+        c = i.center[0]**2 + i.center[1]**2 + i.center[2]**2 + startPoint[0]**2 + startPoint[1]**2 + startPoint[2]**2 + 2 * (-i.center[0] * startPoint[0] - i.center[1] * startPoint[1] - i.center[2] * startPoint[2]) - i.radius**2
 
         # calculate the discriminant
-        discriminant = b**2 - (4 * a * c)
+        discriminant = (b**2) - (4 * a * c)
 
         if discriminant < 0:
             pass
         elif discriminant == 0:
-            t = (-b + discriminant)/(2 * a)
+            t = (-b + math.sqrt(discriminant))/(2 * a)
 
             intersect.append(vectoradd(startPoint, scalarMult(ray, t)))
             intersect.append(i)
@@ -404,8 +416,8 @@ def findClosestIntersect(startPoint, ray):
             
             return intersect
         elif discriminant > 0:
-            t = (-b + discriminant)/(2 * a)
-            t2 = (-b - discriminant)/(2 * a)
+            t = (-b + math.sqrt(discriminant))/(2 * a)
+            t2 = (-b - math.sqrt(discriminant))/(2 * a)
 
             # verify which root gives you the closer intersect
             if t2 < t:
@@ -461,9 +473,9 @@ w.pack()
 # Setup Objects
 
 # instance green, red, and blue spheres
-spherelist.append(sphere(50, [250, 100, -500], normalvector([255, 0, 0])))
-spherelist.append(sphere(50, [500, 100, -450], normalvector([0, 0, 255])))
-spherelist.append(sphere(50, [700, 100, -400], normalvector([0, 255, 0])))
+spherelist.append(sphere(50, [-125, -40, -50], normalvector([255, 0, 0])))
+spherelist.append(sphere(50, [0, -100, 50], normalvector([0, 0, 255])))
+spherelist.append(sphere(50, [125, -80, 100], normalvector([0, 255, 0])))
 
 board = checkerboard()
 
