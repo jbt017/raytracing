@@ -13,9 +13,7 @@ from tkinter import *
 CanvasWidth = 800
 CanvasHeight = 400
 d = 500
-viewpoint = [0, 0, -500]
-filltype = 1
-activeObjectIndex = 0
+viewpoint = [0, 0, -500] # center of projection
 debug = False
 lightsource = [1, 1, -1]
 # 45 degrees behind the viewer
@@ -27,15 +25,20 @@ Ip = 0.7
 Kd = 0.5
 Ks = 0.5
 # specular index constant
-specIndex = 1
+specIndex = 10
+blackbackground = "#000000"
+skyboxcolor = "#94f3ff"
 
 # ************************************************************************************
 # object defitions
 
 class sphere:
-    def __init__(self, radius, color):
+    def __init__(self, radius, center, color):
         self.radius = radius
         self.color = color
+        self.center = center
+
+spherelist = []
 
 # ************************************************************************************
 # function definitions
@@ -57,6 +60,16 @@ def vectorsub(P, Q):
         sum.append(P[i] - Q[i])
     
     return sum
+
+# scalar multiplication
+def scalarMult(vector, scalar):
+    product = []
+
+    for i in vector:
+        product.append(i * scalar)
+    
+    return product
+
 
 # Compute cross product of 2 3D vectors
 def crossproduct(vector1, vector2):
@@ -135,16 +148,118 @@ def reflect(N, L):
 
     return normalvector(R)
 
+# generate a color hex code string from the illumination components
+def triColorHexCode(ambient, diffuse, specular, color):
+    if color == "green":
+        combinedColorCode = greencolorHexCode(ambient + diffuse + specular)
+        specularColorCode = greencolorHexCode(specular)
+    colorString = "#" + specularColorCode + combinedColorCode + specularColorCode
+    return colorString
+
+def greencolorHexCode(intensity):
+    if intensity > 1:
+        intensity = 1
+    hexString = str(hex(round(255 * intensity)))
+    if hexString[0] == "-":
+        print("negative intensity error")
+    else:
+        # get rid of "0x" at the beginning of hex strings
+        trimmedHexString = hexString[2:]
+        # convert single digit hex strings to two digit hex strings
+        if len(trimmedHexString) == 1: trimmedHexString = "0" + trimmedHexString
+        # we will use the green color component to display our monochrome illumination results
+    return trimmedHexString
+
+# compute local color from Phong Illumination Model
+def computeLocalColor():
+    color = 0
+    return color
+
+# combine color sources to output pixel color
+def combineColors(localColor, localWeight, reflectedColor, reflectedWeight):
+    color = localColor
+    return color
+
 
 # ************************************************************************************
 # drawing/implementation methods
 
 # trace ray from pixel 
-def traceray(vector, numbounces):
-    color = "red"
+def traceray(startPoint, ray, depth):
+    # return black if you reach the bottom of the recursive call
+    if depth == 0:
+        return blackbackground
+
+    # interset ray with all objects and find intersection point
+    # (if any) that is closest to startPoint of ray
+    if depth == 4:
+        ray = vectorsub(startPoint, ray)
+    intersection = findClosestIntersect(startPoint, ray)
+
+    # if no intersection return skyboxcolor
+
+    if intersection == []:
+        return skyboxcolor
+
+    # Compute local color
+    localColor = computeLocalColor()
+
+    # Compute reflected direction
+    N = "surface norm"
+    L = normalvector(lightsource)
+    reflectedVector = reflect(N,L)
+
+    # Compute color of reflection
+    reflectedColor = traceray(intersection, reflectedVector, depth-1)
+
+    # Combine local and reflected colors
+    localWeight = 1
+    reflectedWeight = 1
+    color = combineColors(localColor, localWeight, reflectedColor, reflectedWeight)
 
     return color
 
+
+# find possible intersects (if any) and return the closest, return false if no intersect
+def findClosestIntersect(startPoint, ray):
+    intersect = []
+
+    # check spheres for possible intersections
+    for i in spherelist:
+        # calculate pieces of your quadratic
+        a = ray[0]^2 + ray[1]^2 + ray[2]^2
+        b = 2 * ray[0] * (startPoint[0] - i.center[0]) + 2 * ray[1] * (startPoint[1] - i.center[1]) + 2 * ray[2] * (startPoint[2] - i.center[2])
+        c = i.center[0]^2 + i.center[1]^2 + i.center[2]^2 + startPoint[0] + startPoint[1] + startPoint[2] + 2 * (-i.center[0] + startPoint[0] - i.center[1] + startPoint[1] - i.center[2] + startPoint[2]) - i.radius^2
+
+        # calculate the discriminant
+        discriminant = b^2 - (4 * a * c)
+
+        if discriminant < 0:
+            pass
+        elif discriminant == 0:
+            t = (-b + discriminant)/(2 * a)
+
+            intersect = vectoradd(startPoint, scalarMult(ray, t))
+        else:
+            t = (-b + discriminant)/(2 * a)
+            t2 = (-b - discriminant)/(2 * a)
+
+            # verify which root gives you the closer intersect
+            if t2 < t:
+                t = t2
+
+            intersect = vectoradd(startPoint, scalarMult(ray, t))
+
+    return intersect
+
+# draw methods
+def drawSphere(object):
+    # do stuff
+    print("drawingSpherehere")
+
+def drawBoard(object):
+    # do stuff
+    print("drawingBoardhere")
 
 
 # ************************************************************************************
@@ -157,3 +272,11 @@ outerframe.pack()
 w = Canvas(outerframe, width=CanvasWidth, height=CanvasHeight)
 w.pack()
 root.mainloop()
+
+# ************************************************************************************
+# Setup Objects
+
+# instance green, red, and blue spheres
+spherelist.append(sphere(50, [250, 200, 50], "red"))
+spherelist.append(sphere(50, [500, 200, -50], "blue"))
+spherelist.append(sphere(50, [700, 200, -0], "green"))

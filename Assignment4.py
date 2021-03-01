@@ -25,7 +25,7 @@ Ip = 0.7
 Kd = 0.5
 Ks = 0.5
 # specular index constant
-specIndex = 1
+specIndex = 8
 # storage list for G shading vertex norms
 vertexnorms = []
 
