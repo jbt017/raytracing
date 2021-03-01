@@ -110,7 +110,41 @@ def convertToDisplayCoordinates(point):
 
     return displayXY
 
+# generate a 3-D reflection vector, given a surface normal, N, and lighting vector, L
+def reflect(N, L):
+    R = []
+    N = normalvector(N)
+    L = normalvector(L)
+
+    twoCosPhi = 2 * (N[0]*L[0] + N[1]*L[1] + N[2]*L[2])
+
+    if twoCosPhi > 0:
+        for i in range(3):
+            R.append( - L[i])
+    else:
+        for i in range(3):
+            R.append( -N[i] + (L[i] / twoCosPhi))
+
+    return normalvector(R)
+
+
+# ************************************************************************************
+# drawing/implementation methods
+
+# trace ray from pixel 
+def traceray(vector, numbounces):
+    color = "red"
+
+    return color
+
 
 
 # ************************************************************************************
 # GUI setup
+
+root = Tk()
+outerframe = Frame(root)
+outerframe.pack()
+
+w = Canvas(outerframe, width=CanvasWidth, height=CanvasHeight)
+w.pack()
