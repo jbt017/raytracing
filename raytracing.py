@@ -13,9 +13,10 @@ from tkinter import *
 CanvasWidth = 800
 CanvasHeight = 400
 d = 500
-viewpoint = [0, 0, -500] # center of projection
+viewpoint = [0, 0, -d] # center of projection
 debug = False
 lightsource = [1, 1, -1]
+lightsource = normalvector(lightsource)
 # 45 degrees behind the viewer
 # ambient light intensity
 Ia = 0.3
@@ -37,8 +38,52 @@ class sphere:
         self.radius = radius
         self.color = color
         self.center = center
+        self.N = []
+
+    def getcolor(self, X, Z):
+        return self.color
+
+    def getsurfNorm(self, point):
+        self.N = normalvector(point)
+        return self.N
 
 spherelist = []
+
+class checkerboard:
+    def __init__(self):
+        self.y = -200
+        self.color = ""
+        self.point = [0. -200, 0]
+        P = vectorsub([100, -200, 100], self.point)
+        Q = vectorsub([-100, -200, 100], self.point)
+        self.N = normalvector(crossproduct(P,Q))
+
+    def getcolor(self, X, Z):
+        if X >= 0: 
+            ColorFlag = 1
+        else:
+            ColorFlag = 0
+
+        if abs(X) % 200 > 100:
+            if ColorFlag == 0:
+                ColorFlag = 1
+
+        if abs(Z) % 200 > 100:
+            if ColorFlag == 0:
+                ColorFlag = 1
+
+        if ColorFlag == 1:
+            self.color = "red"
+        else:
+            self.color = "white"
+
+        return self.color
+
+    def getsurfNorm(self, point):
+        return self.N
+
+
+    
 
 # ************************************************************************************
 # function definitions
@@ -171,8 +216,24 @@ def greencolorHexCode(intensity):
     return trimmedHexString
 
 # compute local color from Phong Illumination Model
-def computeLocalColor():
-    color = 0
+def computeLocalColor(object, startPoint):
+    L = normalvector(lightsource)
+    V = normalvector([0,0,-1])
+    N = object.getsurfNorm(startPoint)
+    ambient = Ia * Kd
+    NdotL = dotproduct(N, L)
+
+    if NdotL < 0:
+        NdotL = 0
+    diffuse = Ip * Kd * NdotL
+    R = reflect(N, L) # return normal reflect vector
+    RdotV = dotproduct(R, V)
+
+    if RdotV < 0:
+        RdotV = 0
+    specular = Ip * Ks * RdotV**specIndex
+
+    color = triColorHexCode(ambient, diffuse, specular, object.getcolor(startPoint[0], startPoint[1]))
     return color
 
 # combine color sources to output pixel color
@@ -198,16 +259,18 @@ def traceray(startPoint, ray, depth):
 
     # if no intersection return skyboxcolor
 
-    if intersection == []:
+    if intersection[0] == []:
         return skyboxcolor
 
     # Compute local color
-    localColor = computeLocalColor()
+    localColor = computeLocalColor(intersection[1], startPoint)
 
     # Compute reflected direction
-    N = "surface norm"
+    N = intersection[1].getsurfNorm(startPoint)
     L = normalvector(lightsource)
-    reflectedVector = reflect(N,L)
+    # sub T for L to account for trace vector rather than lighting vector, i.e. it moves in the opposite direction
+    T = scalarMult(L, -1)
+    reflectedVector = reflect(N,T)
 
     # Compute color of reflection
     reflectedColor = traceray(intersection, reflectedVector, depth-1)
@@ -239,7 +302,8 @@ def findClosestIntersect(startPoint, ray):
         elif discriminant == 0:
             t = (-b + discriminant)/(2 * a)
 
-            intersect = vectoradd(startPoint, scalarMult(ray, t))
+            intersect = intersect.append(vectoradd(startPoint, scalarMult(ray, t)))
+            intersect.append(i)
         else:
             t = (-b + discriminant)/(2 * a)
             t2 = (-b - discriminant)/(2 * a)
@@ -248,18 +312,19 @@ def findClosestIntersect(startPoint, ray):
             if t2 < t:
                 t = t2
 
-            intersect = vectoradd(startPoint, scalarMult(ray, t))
+            intersect = intersect.append(vectoradd(startPoint, scalarMult(ray, t)))
+            intersect.append(i)
 
     # check checker plane for possible intersections
     if intersect == []:
         # calculate pieces of t formula
-        A = "X component of point on plane surface norm"
-        B = "Y componenet of point on plane surface norm"
-        C = "Z component of point on plane surface norm"
+        A = board.getsurfNorm(startPoint)[0]
+        B = board.getsurfNorm(startPoint)[1]
+        C = board.getsurfNorm(startPoint)[2]
 
-        a = "X component of point on plan"
-        b = "Y componenet of point on plane"
-        c = "Z component of point on plane" 
+        a = board.point[0]
+        b = board.point[1]
+        c = board.point[2]
 
         D = A * a + B * b + C * c
 
@@ -272,7 +337,8 @@ def findClosestIntersect(startPoint, ray):
             numerator = -((A * startPoint[0] + B * startPoint[1] + C * startPoint[2]) - D)
             t = numerator / denominator
 
-            intersect = vectoradd(startPoint, scalarMult(ray, t))
+            intersect = intersect.append(vectoradd(startPoint, scalarMult(ray, t)))
+            intersect.append(board)
 
 
     return intersect
@@ -305,3 +371,5 @@ root.mainloop()
 spherelist.append(sphere(50, [250, 200, 50], "red"))
 spherelist.append(sphere(50, [500, 200, -50], "blue"))
 spherelist.append(sphere(50, [700, 200, -0], "green"))
+
+board = checkerboard()
