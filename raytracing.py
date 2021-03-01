@@ -75,7 +75,6 @@ d = 500
 viewpoint = [0, 0, -d] # center of projection
 debug = False
 lightsource = [1, 1, -1]
-lightsource = normalvector(lightsource)
 # 45 degrees behind the viewer
 # ambient light intensity
 Ia = 0.3
@@ -83,12 +82,12 @@ Ia = 0.3
 Ip = 0.7
 Ipl = normalvector([150, 150, 150])
 # constants of reflectivity
-Kd = 0.5
-Ks = 0.5
+Kd = 1
+Ks = 1
 # specular index constant
-specIndex = 10
+specIndex = 20
 blackbackground = "#000000"
-skyboxcolor = "#94f3ff"
+skyboxcolor = "#E2F9FA"
 depth = 4
 
 
@@ -101,8 +100,8 @@ class sphere:
         self.radius = radius
         self.color = color
         self.center = center
-        self.localweight = 0.20
-        self.reflectweight = 0.80
+        self.localweight = 0.10
+        self.reflectweight = 0.90
         self.N = []
 
     def getcolor(self, X, Z):
@@ -240,7 +239,7 @@ def computeLocalColor(object, startPoint):
 
     # calculate red
     L = normalvector(lightsource)
-    V = normalvector([0,0,-1])
+    V = normalvector(viewpoint)
     N = object.getsurfNorm(startPoint)
     ambient = object.getcolor(startPoint[0], startPoint[2])[0] * Kd
     NdotL = dotproduct(N, L)
@@ -262,7 +261,7 @@ def computeLocalColor(object, startPoint):
     # calculate green
 
     L = normalvector(lightsource)
-    V = normalvector([0,0,-1])
+    V = normalvector(viewpoint)
     N = object.getsurfNorm(startPoint)
     ambient = object.getcolor(startPoint[0], startPoint[2])[1] * Kd
     NdotL = dotproduct(N, L)
@@ -284,7 +283,7 @@ def computeLocalColor(object, startPoint):
     # calculate blue
 
     L = normalvector(lightsource)
-    V = normalvector([0,0,-1])
+    V = normalvector(viewpoint)
     N = object.getsurfNorm(startPoint)
     ambient = object.getcolor(startPoint[0], startPoint[2])[2] * Kd
     NdotL = dotproduct(N, L)
@@ -374,7 +373,7 @@ def traceray(startPoint, ray, depth):
     localColor = computeLocalColor(intersection[1], intersection[0])
 
     # Compute reflected direction
-    N = intersection[1].getsurfNorm(startPoint)
+    N = intersection[1].getsurfNorm(intersection[0][0:3])
     L = normalvector(lightsource)
     # sub T for L to account for trace vector rather than lighting vector, i.e. it moves in the opposite direction
     T = scalarMult(L, -1)
@@ -473,9 +472,9 @@ w.pack()
 # Setup Objects
 
 # instance green, red, and blue spheres
-spherelist.append(sphere(50, [-125, -40, -50], normalvector([255, 0, 0])))
-spherelist.append(sphere(50, [0, -100, 50], normalvector([0, 0, 255])))
-spherelist.append(sphere(50, [125, -80, 100], normalvector([0, 255, 0])))
+spherelist.append(sphere(50, [-125, -40, 100], normalvector([255, 146, 167])))
+spherelist.append(sphere(50, [0, -100, 150], normalvector([128, 179, 237])))
+spherelist.append(sphere(50, [125, -80, 200], normalvector([11, 247, 136])))
 
 board = checkerboard()
 
