@@ -9,84 +9,8 @@ import copy
 from tkinter import *
 
 
-# Constants and globals
-CanvasWidth = 800
-CanvasHeight = 400
-d = 500
-viewpoint = [0, 0, -d] # center of projection
-debug = False
-lightsource = [1, 1, -1]
-lightsource = normalvector(lightsource)
-# 45 degrees behind the viewer
-# ambient light intensity
-Ia = 0.3
-# point light intensity
-Ip = 0.7
-# constants of reflectivity
-Kd = 0.5
-Ks = 0.5
-# specular index constant
-specIndex = 10
-blackbackground = "#000000"
-skyboxcolor = "#94f3ff"
-
 # ************************************************************************************
-# object defitions
-
-class sphere:
-    def __init__(self, radius, center, color):
-        self.radius = radius
-        self.color = color
-        self.center = center
-        self.N = []
-
-    def getcolor(self, X, Z):
-        return self.color
-
-    def getsurfNorm(self, point):
-        self.N = normalvector(point)
-        return self.N
-
-spherelist = []
-
-class checkerboard:
-    def __init__(self):
-        self.y = -200
-        self.color = ""
-        self.point = [0. -200, 0]
-        P = vectorsub([100, -200, 100], self.point)
-        Q = vectorsub([-100, -200, 100], self.point)
-        self.N = normalvector(crossproduct(P,Q))
-
-    def getcolor(self, X, Z):
-        if X >= 0: 
-            ColorFlag = 1
-        else:
-            ColorFlag = 0
-
-        if abs(X) % 200 > 100:
-            if ColorFlag == 0:
-                ColorFlag = 1
-
-        if abs(Z) % 200 > 100:
-            if ColorFlag == 0:
-                ColorFlag = 1
-
-        if ColorFlag == 1:
-            self.color = "red"
-        else:
-            self.color = "white"
-
-        return self.color
-
-    def getsurfNorm(self, point):
-        return self.N
-
-
-    
-
-# ************************************************************************************
-# function definitions
+# vector math
 
 # vector addition
 def vectoradd(P, Q):
@@ -144,6 +68,93 @@ def normalvector(vector):
 
     return normalv
 
+# Constants and globals
+CanvasWidth = 800
+CanvasHeight = 400
+d = 500
+viewpoint = [0, 0, -d] # center of projection
+debug = False
+lightsource = [1, 1, -1]
+lightsource = normalvector(lightsource)
+# 45 degrees behind the viewer
+# ambient light intensity
+Ia = 0.3
+# point light intensity
+Ip = 0.7
+Ipl = normalvector([150, 150, 150])
+# constants of reflectivity
+Kd = 0.5
+Ks = 0.5
+# specular index constant
+specIndex = 10
+blackbackground = "#000000"
+skyboxcolor = "#94f3ff"
+depth = 4
+
+
+
+# ************************************************************************************
+# object defitions
+
+class sphere:
+    def __init__(self, radius, center, color):
+        self.radius = radius
+        self.color = color
+        self.center = center
+        self.localweight = 20
+        self.reflectweight = 80
+        self.N = []
+
+    def getcolor(self, X, Z):
+        return self.color
+
+    def getsurfNorm(self, point):
+        self.N = normalvector(point)
+        return self.N
+
+spherelist = []
+
+class checkerboard:
+    def __init__(self):
+        self.y = -200
+        self.color = ""
+        self.point = [0, -200, 0]
+        self.localweight = 80
+        self.reflectweight = 20
+        P = vectorsub([100, -200, 100], self.point)
+        Q = vectorsub([-100, -200, 100], self.point)
+        self.N = normalvector(crossproduct(P,Q))
+
+    def getcolor(self, X, Z):
+        if X >= 0: 
+            ColorFlag = 1
+        else:
+            ColorFlag = 0
+
+        if abs(X) % 200 > 100:
+            if ColorFlag == 0:
+                ColorFlag = 1
+
+        if abs(Z) % 200 > 100:
+            if ColorFlag == 0:
+                ColorFlag = 1
+
+        if ColorFlag == 1:
+            self.color = normalvector([255, 0, 0])
+        else:
+            self.color = "white"
+            self.color = normalvector([255, 255, 255])
+
+        return self.color
+
+    def getsurfNorm(self, point):
+        return self.N
+
+
+    
+
+# ************************************************************************************
+# function definitions
 # ************************************************************************************
 # project/conversion/hex  suppporting methods
 
@@ -195,15 +206,12 @@ def reflect(N, L):
 
 # generate a color hex code string from the illumination components
 def triColorHexCode(ambient, diffuse, specular, color):
-    if color == "green":
-        combinedColorCode = greencolorHexCode(ambient + diffuse + specular)
-        specularColorCode = greencolorHexCode(specular)
+    combinedColorCode = colorHexCode(ambient + diffuse + specular)
+    specularColorCode = colorHexCode(specular)
     colorString = "#" + specularColorCode + combinedColorCode + specularColorCode
     return colorString
 
-def greencolorHexCode(intensity):
-    if intensity > 1:
-        intensity = 1
+def colorHexCode(intensity):
     hexString = str(hex(round(255 * intensity)))
     if hexString[0] == "-":
         print("negative intensity error")
@@ -217,23 +225,73 @@ def greencolorHexCode(intensity):
 
 # compute local color from Phong Illumination Model
 def computeLocalColor(object, startPoint):
-    L = normalvector(lightsource)
+
+    # calculate red
+    L = normalvector(vectorsub(lightsource, startPoint))
     V = normalvector([0,0,-1])
     N = object.getsurfNorm(startPoint)
-    ambient = Ia * Kd
+    ambient = object.getcolor(startPoint[0], startPoint[2])[0] * Kd
     NdotL = dotproduct(N, L)
 
     if NdotL < 0:
         NdotL = 0
-    diffuse = Ip * Kd * NdotL
+    diffuse = Ipl[0] * Kd * NdotL
     R = reflect(N, L) # return normal reflect vector
     RdotV = dotproduct(R, V)
 
     if RdotV < 0:
         RdotV = 0
-    specular = Ip * Ks * RdotV**specIndex
+    specular = Ipl[0] * Ks * RdotV**specIndex
 
-    color = triColorHexCode(ambient, diffuse, specular, object.getcolor(startPoint[0], startPoint[1]))
+    redcolor = triColorHexCode(ambient, diffuse, specular, object.getcolor(startPoint[0], startPoint[1]))
+
+
+    # calculate green
+
+    L = normalvector(lightsource)
+    V = normalvector([0,0,-1])
+    N = object.getsurfNorm(startPoint)
+    ambient = object.getcolor(startPoint[0], startPoint[2])[1] * Kd
+    NdotL = dotproduct(N, L)
+
+    if NdotL < 0:
+        NdotL = 0
+    diffuse = Ipl[1] * Kd * NdotL
+    R = reflect(N, L) # return normal reflect vector
+    RdotV = dotproduct(R, V)
+
+    if RdotV < 0:
+        RdotV = 0
+    specular = Ipl[1] * Ks * RdotV**specIndex
+
+    greencolor = triColorHexCode(ambient, diffuse, specular, object.getcolor(startPoint[0], startPoint[1]))
+
+    # calculate blue
+
+    L = normalvector(vectorsub(lightsource, startPoint))
+    V = normalvector([0,0,-1])
+    N = object.getsurfNorm(startPoint)
+    ambient = object.getcolor(startPoint[0], startPoint[2])[2] * Kd
+    NdotL = dotproduct(N, L)
+
+    if NdotL < 0:
+        NdotL = 0
+    diffuse = Ipl[2] * Kd * NdotL
+    R = reflect(N, L) # return normal reflect vector
+    RdotV = dotproduct(R, V)
+
+    if RdotV < 0:
+        RdotV = 0
+    specular = Ipl[2] * Ks * RdotV**specIndex
+
+    bluecolor = triColorHexCode(ambient, diffuse, specular, object.getcolor(startPoint[0], startPoint[1]))
+
+    # print(f"bluecolor is {bluecolor}") 
+
+    color = redcolor[0:3] + greencolor[3:5] + bluecolor[5:7]
+    # print(f"combined color code is {color}")
+
+
     return color
 
 # combine color sources to output pixel color
@@ -273,38 +331,39 @@ def traceray(startPoint, ray, depth):
     reflectedVector = reflect(N,T)
 
     # Compute color of reflection
-    reflectedColor = traceray(intersection, reflectedVector, depth-1)
+    reflectedColor = traceray(intersection[0], reflectedVector, depth-1)
 
     # Combine local and reflected colors
-    localWeight = 1
-    reflectedWeight = 1
-    color = combineColors(localColor, localWeight, reflectedColor, reflectedWeight)
+    color = combineColors(localColor, intersection[1].localweight, reflectedColor, intersection[1].reflectweight)
 
-    return color
+    return localColor
 
 
 # find possible intersects (if any) and return the closest, return false if no intersect
 def findClosestIntersect(startPoint, ray):
     intersect = []
+    # print(f"This is the startpoint {startPoint} and this is the ray {ray}")
 
     # check spheres for possible intersections
     for i in spherelist:
         # calculate pieces of your quadratic
-        a = ray[0]^2 + ray[1]^2 + ray[2]^2
+        a = ray[0]**2 + ray[1]**2 + ray[2]**2
         b = 2 * ray[0] * (startPoint[0] - i.center[0]) + 2 * ray[1] * (startPoint[1] - i.center[1]) + 2 * ray[2] * (startPoint[2] - i.center[2])
-        c = i.center[0]^2 + i.center[1]^2 + i.center[2]^2 + startPoint[0] + startPoint[1] + startPoint[2] + 2 * (-i.center[0] + startPoint[0] - i.center[1] + startPoint[1] - i.center[2] + startPoint[2]) - i.radius^2
+        c = i.center[0]**2 + i.center[1]**2 + i.center[2]**2 + startPoint[0] + startPoint[1] + startPoint[2] + 2 * (-i.center[0] + startPoint[0] - i.center[1] + startPoint[1] - i.center[2] + startPoint[2]) - i.radius**2
 
         # calculate the discriminant
-        discriminant = b^2 - (4 * a * c)
+        discriminant = b**2 - (4 * a * c)
 
         if discriminant < 0:
             pass
         elif discriminant == 0:
             t = (-b + discriminant)/(2 * a)
 
-            intersect = intersect.append(vectoradd(startPoint, scalarMult(ray, t)))
+            intersect.append(vectoradd(startPoint, scalarMult(ray, t)))
             intersect.append(i)
-        else:
+            
+            return intersect
+        elif discriminant > 0:
             t = (-b + discriminant)/(2 * a)
             t2 = (-b - discriminant)/(2 * a)
 
@@ -312,8 +371,9 @@ def findClosestIntersect(startPoint, ray):
             if t2 < t:
                 t = t2
 
-            intersect = intersect.append(vectoradd(startPoint, scalarMult(ray, t)))
+            intersect.append(vectoradd(startPoint, scalarMult(ray, t)))
             intersect.append(i)
+            return intersect
 
     # check checker plane for possible intersections
     if intersect == []:
@@ -337,20 +397,12 @@ def findClosestIntersect(startPoint, ray):
             numerator = -((A * startPoint[0] + B * startPoint[1] + C * startPoint[2]) - D)
             t = numerator / denominator
 
-            intersect = intersect.append(vectoradd(startPoint, scalarMult(ray, t)))
+            intersect.append(vectoradd(startPoint, scalarMult(ray, t)))
             intersect.append(board)
 
 
     return intersect
 
-# draw methods
-def drawSphere(object):
-    # do stuff
-    print("drawingSpherehere")
-
-def drawBoard(object):
-    # do stuff
-    print("drawingBoardhere")
 
 
 # ************************************************************************************
@@ -362,14 +414,24 @@ outerframe.pack()
 
 w = Canvas(outerframe, width=CanvasWidth, height=CanvasHeight)
 w.pack()
-root.mainloop()
 
 # ************************************************************************************
 # Setup Objects
 
 # instance green, red, and blue spheres
-spherelist.append(sphere(50, [250, 200, 50], "red"))
-spherelist.append(sphere(50, [500, 200, -50], "blue"))
-spherelist.append(sphere(50, [700, 200, -0], "green"))
+spherelist.append(sphere(50, [250, 200, 50], normalvector([255, 0, 0])))
+spherelist.append(sphere(50, [500, 200, -50], normalvector([0, 0, 255])))
+spherelist.append(sphere(50, [700, 200, -0], normalvector([0, 255, 0])))
 
 board = checkerboard()
+
+# start the draw
+for y in range(CanvasHeight):
+        for x in range(CanvasWidth):
+            ijk = vectorsub([x, y, 0], viewpoint)
+            color = traceray(viewpoint, ijk, depth)
+            # print(f"printing color {color} at {x} and {y}")
+            w.create_line(x, y, x+1, y, fill=color)
+
+
+root.mainloop()

@@ -893,6 +893,7 @@ def polyfill(poly, color):
             # print(f"Here is the intensity {intensity}")
             # print(f"Here is the delta line intesnity {deltalineintensity}")
 
+            
             w.create_line(x, y, x+1, y, fill=color)
             if debug:
                 print(f"Printing pixel at X {x} and Y {y}")
